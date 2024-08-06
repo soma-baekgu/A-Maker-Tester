@@ -1,0 +1,22 @@
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+
+rule_files:
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "backend"
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 1s
+    scheme: http
+    bearer_token: "./token.txt"
+    static_configs:
+      - targets: [ 'localhost:8080' ]

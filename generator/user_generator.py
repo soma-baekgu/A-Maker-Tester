@@ -55,7 +55,7 @@ def save_jwt_to_json(jwt_dict, filename):
 
 
 if __name__ == '__main__':
-    num_users = 100
+    num_users = 1000
     users, jwt_dict = generate_users(num_users)
     insert_data_to_mysql(users, SQL)
     save_jwt_to_json(jwt_dict, '../test_data/user_jwts.json')

@@ -1,55 +1,57 @@
 import http from 'k6/http';
 import {sleep, check} from 'k6';
-import {SharedArray} from 'k6/data';
+import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 
 export let options = {
-  vus: 100,
+  vus: 1,
   duration: '10s',
 };
 
-const BASE_URL = __ENV.BASE_URL
-console.log(BASE_URL)
+const BASE_URL = "https://dev.a-maker.co.kr"
 
-// JSON 파일을 init 단계에서 읽어오는 함수
-const usersArray = new SharedArray('usersArray', function () {
-  const users = JSON.parse(open('../test_data/user_jwts.json'));
-  return Object.entries(users).map(([email, jwt]) => ({email, jwt}));
-});
 
-const leader = usersArray[0]
 
 export function setup() {
-  const initResponse = http.post(`${BASE_URL}/workspaces`, JSON.stringify({
+  const users = []
+  for(let i = 0; i < options.vus; i++){
+    const loginResponse = http.post(`${BASE_URL}/api/v1/auth/code/google?code=${randomString(8)}`)
+    users.push(JSON.parse(loginResponse.body).data)
+  }
+  let leader = users[0]
+
+  http.post(`${BASE_URL}/api/v1/workspaces`, JSON.stringify({
     name: "워크스페이스",
-    inviteesEmails: usersArray.map(u => u.email).filter(e => e !== leader.email),
+    inviteesEmails: users.map(u => u.email).filter(e => e !== leader.email),
   }), {
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${leader.jwt}`,
+      'Authorization': `Bearer ${leader.token}`,
     },
   })
 
-  const workspaceRequest = http.get(`${BASE_URL}/workspaces`, {
+  const workspaceRequest = http.get(`${BASE_URL}/api/v1/workspaces`, {
     headers: {
-      'Authorization': `Bearer ${leader.jwt}`,
+      'Authorization': `Bearer ${leader.token}`,
     },
   })
+
+  console.log(workspaceRequest)
   const workspaces = JSON.parse(workspaceRequest.body).data.workspaces
   const workspace = workspaces[workspaces.length - 1]
 
-  usersArray.forEach(u => {
+  users.forEach(u => {
     if (u.email === leader.email) return
 
-    http.put(`${BASE_URL}/workspaces/${workspace.workspaceId}/invite/activate`, null, {
+    http.put(`${BASE_URL}/api/v1/workspaces/${workspace.workspaceId}/invite/activate`, null, {
       headers: {
-        'Authorization': `Bearer ${u.jwt}`,
+        'Authorization': `Bearer ${u.token}`,
       },
     });
   })
 
-  const chatRoomResponse = http.get(`${BASE_URL}/workspaces/${workspace.workspaceId}/chat-rooms/joined`, {
+  const chatRoomResponse = http.get(`${BASE_URL}/api/v1/workspaces/${workspace.workspaceId}/chat-rooms/joined`, {
     headers: {
-      'Authorization': `Bearer ${leader.jwt}`,
+      'Authorization': `Bearer ${leader.token}`,
     },
   })
 
@@ -57,14 +59,13 @@ export function setup() {
   const chatRooms = JSON.parse(chatRoomResponse.body).data.chatRooms
   const chatRoom = chatRooms[0]
 
-  // 응답 데이터를 가공하여 필요한 초기 데이터를 반환합니다.
-  return {workspace, chatRoom};
+  return {workspace, chatRoom, users};
 }
 
 export default function (initdata) {
-  const {workspace, chatRoom } = initdata
-  const randomUser = usersArray[Math.floor(Math.random() * usersArray.length)];
-  const jwtToken = randomUser.jwt;
+  const {workspace, chatRoom, users } = initdata
+  const randomUser = users[Math.floor(Math.random() * users.length)];
+  const jwtToken = randomUser.token;
 
 
   const headers = {
@@ -76,13 +77,13 @@ export default function (initdata) {
     {
       name: '채팅방 조회',
       method: 'GET',
-      url: `${BASE_URL}/workspaces/${workspace.workspaceId}/chat-rooms/joined`,
+      url: `${BASE_URL}/api/v1/workspaces/${workspace.workspaceId}/chat-rooms/joined`,
       params: {headers: headers}
     },
     {
       name: '채팅 생성',
       method: 'POST',
-      url: `${BASE_URL}/chat-rooms/${workspace.workspaceId}/chats`,
+      url: `${BASE_URL}/api/v1/chat-rooms/${chatRoom.chatRoomId}/chats`,
       params: {
         headers: headers,
       },
@@ -93,7 +94,7 @@ export default function (initdata) {
     {
       name: '채팅 조회',
       method: 'GET',
-      url: `${BASE_URL}/chat-rooms/${chatRoom.chatRoomId}/chats/recent`,
+      url: `${BASE_URL}/api/v1/chat-rooms/${chatRoom.chatRoomId}/chats/recent`,
       params: {headers}
     }
   ];
@@ -104,6 +105,9 @@ export default function (initdata) {
       check(response, {
         "success": (res) => {
           console.log(res.status, res.url)
+          if(res.status !== 201){
+            console.log(res.body)
+          }
           return res.status === 201;
         }
       });
@@ -113,11 +117,14 @@ export default function (initdata) {
       check(response, {
         "success": (res) => {
           console.log(res.status, res.url)
+          if(res.status !== 200){
+            console.log(res.body)
+          }
           return res.status === 200;
         }
       });
     }
 
-    sleep(0.01);
   });
+  sleep(0.1);
 }
