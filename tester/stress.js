@@ -10,7 +10,6 @@ export let options = {
 const BASE_URL = "https://dev.a-maker.co.kr"
 
 
-
 export function setup() {
   const users = []
   for(let i = 0; i < options.vus; i++){

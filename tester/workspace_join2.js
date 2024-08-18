@@ -29,7 +29,6 @@ export function setup() {
         'Authorization': `Bearer ${user.token}`,
       },
     })
-
     const workspaceRequest = http.get(`${BASE_URL}/api/v1/workspaces`, {
       headers: {
         'Authorization': `Bearer ${user.token}`,

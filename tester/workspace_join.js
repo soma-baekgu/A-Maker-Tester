@@ -9,7 +9,6 @@ export let options = {
 
 const BASE_URL = "http://127.0.0.1:8080"
 
-
 export function setup() {
   const users = []
   for (let i = 0; i < options.vus; i++) {
@@ -20,7 +19,7 @@ export function setup() {
 
   const workspaces = []
   users.forEach(user => {
-    http.post(`${BASE_URL}/api/v1/workspaces`, JSON.stringify({
+    const result = http.post(`${BASE_URL}/api/v1/workspaces`, JSON.stringify({
       name: "워크스페이스",
       inviteesEmails: users.map(u => u.email).filter(e => e !== user.email),
     }), {
