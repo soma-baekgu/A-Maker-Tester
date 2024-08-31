@@ -154,8 +154,6 @@ export default function (initdata) {
             }
 
         }
-
-
     });
 
     console.log(chatIds)

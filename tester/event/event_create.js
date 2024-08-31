@@ -2,7 +2,7 @@ import http from 'k6/http';
 import {sleep, check} from 'k6';
 import {randomString} from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 
-const BASE_URL = "http://127.0.0.1:8080"
+const BASE_URL = "https://prod.a-maker.co.kr"
 
 /**
  * Cache Hit Rate
